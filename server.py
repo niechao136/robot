@@ -14,7 +14,7 @@ load_dotenv()
 # from RAG_answer import MyLLM
 # RAGllm = MyLLM()
 
-os.environ["SERPAPI_API_KEY"] = os.environ["SERPAPI_API_KEY"]
+# os.environ["SERPAPI_API_KEY"] = os.environ["SERPAPI_API_KEY"]
 
 app = FastAPI()
 
