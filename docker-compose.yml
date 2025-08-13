@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  figma-service:
+    build:
+      context: .
+      args:
+        USE_CN_SOURCE: ${USE_CN_SOURCE:-true}  # 使用环境变量，如果没有设置则默认使用 true
+    ports:
+      - "10082:10082"
+      - "3478:3478"
+      - "6379:6379"
