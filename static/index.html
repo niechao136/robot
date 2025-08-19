@@ -94,15 +94,47 @@
         var chatText = chatInput.value;
         console.log("输入的文本：" + chatText);
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", `http://150.109.15.178:10082/chat?query=${chatText}`);
+        xhr.open("POST", `http://127.0.0.1:8000/chat?query=${chatText}`);
         xhr.addEventListener("readystatechange", function () {
             if (this.readyState === 4) {
-                var responseData = JSON.parse(this.responseText);
-                console.log("AI返回的文本：" + responseData);
-                speakerHandel(avatarSynthesizer, responseData[0].msg, responseData[0].qingxu);
-                // 将AI返回的文本显示在页面上
-                var responseArea = document.getElementById("responseArea");
-                responseArea.innerHTML = '<div class="responseText">' + responseData[0].msg + '</div>'; // 清空并更新内容
+                console.log("响应状态码：" + this.status);
+                console.log("响应文本：" + this.responseText);
+                
+                try {
+                    // 尝试解析响应
+                    var responseData = JSON.parse(this.responseText);
+                    console.log("解析后的响应数据：", responseData);
+                    
+                    // 检查响应格式是否符合预期
+                    if (Array.isArray(responseData) && responseData.length > 0 && responseData[0].msg && responseData[0].qingxu) {
+                        // 正确格式的响应
+                        speakerHandel(avatarSynthesizer, responseData[0].msg, responseData[0].qingxu);
+                        // 将AI返回的文本显示在页面上
+                        var responseArea = document.getElementById("responseArea");
+                        responseArea.innerHTML = '<div class="responseText">' + responseData[0].msg + '</div>'; // 清空并更新内容
+                    } else {
+                        // 格式不符合预期，但尝试提取信息
+                        console.warn("响应格式不符合预期，尝试提取可用信息");
+                        var msg = "抱歉，我暂时无法为您提供回答。";
+                        var qingxu = "default";
+                        
+                        if (typeof responseData === 'object') {
+                            if (responseData.msg) msg = responseData.msg;
+                            if (responseData.qingxu) qingxu = responseData.qingxu;
+                        }
+                        
+                        speakerHandel(avatarSynthesizer, msg, qingxu);
+                        var responseArea = document.getElementById("responseArea");
+                        responseArea.innerHTML = '<div class="responseText">' + msg + '</div>';
+                    }
+                } catch (error) {
+                    // 解析错误处理
+                    console.error("解析响应时出错：", error);
+                    // 显示错误信息并尝试继续
+                    var responseArea = document.getElementById("responseArea");
+                    responseArea.innerHTML = '<div class="responseText">抱歉，服务暂时无法响应，请稍后再试。</div>';
+                }
+                
                 chatInput.value = ""; // 清空输入框
             }
         });

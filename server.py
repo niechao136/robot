@@ -165,7 +165,7 @@ class Master:
                 [
                     (
                         "system",
-                        self.SYSTEMPL+"\n这是一段你和用户的对话记忆，对其进行总结摘要，摘要使用第一人称‘我’，并且提取其中的用户关键信息，如姓名、年龄、性别、出生日期等。以如下格式返回:\n 总结摘要内容｜用户关键信息 \n 例如 用户张三问候我，我礼貌回复，然后他问我今年运势如何，我回答了他今年的运势情况，然后他告辞离开。｜张三,生日1999年1月1日"
+                        self.SYSTEMPL+"\n这是一段和你用户的对话记忆，对其进行总结摘要，摘要使用第一人称‘我’，并且提取其中的用户关键信息，如姓名、年龄、性别、出生日期等。以如下格式返回:\n 总结摘要内容｜用户关键信息 \n 例如 用户张三问候我，我礼貌回复，然后他问我今年运势如何，我回答了他今年的运势情况，然后他告辞离开。｜张三,生日1999年1月1日"
                     ),
                     ("user","{input}"),
                 ]
@@ -198,10 +198,10 @@ class Master:
         self.QingXu = result
         print("情绪判断结果:",result)
         res = self.chat(query)
-        # res = RAGllm.invoke(query,'ai产品经理面试.docx').get('answer')
         print({"msg":res,"qingxu":result})
-        yield {"msg":res,"qingxu":result}
-
+        # 修复：返回标准的JSON响应，而不是使用yield
+        return [{"msg":res,"qingxu":result}]
+        
 
 
 @app.get("/get")
