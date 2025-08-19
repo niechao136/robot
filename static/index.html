@@ -133,7 +133,7 @@
         xhr.addEventListener("readystatechange", function (node) {
             if (this.readyState === 4) {
                 var responseData = JSON.parse(this.responseText);
-                console.log("responseData: " + responseData.toString(),this)
+                console.log("responseData: " + responseData,this)
                 var iceServerUrl = responseData.Urls[0]
                 var iceServerUsername = responseData.Username;
                 var iceServerCredential = responseData.Password;
@@ -151,11 +151,11 @@
                         }
                     ]
                 })
-                console.log("peerConnection: " + peerConnection);
+                console.log("peerConnection: " , peerConnection);
 
                 //抓取webtrc
                 peerConnection.ontrack = function (event) {
-                    console.log("event: " + event);
+                    console.log("event: " , event);
                     if (event.track.kind === "video") {
                         console.log("avatar video track received");
                         var videoElement = document.createElement(event.track.kind);
