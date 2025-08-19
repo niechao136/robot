@@ -94,7 +94,7 @@
         var chatText = chatInput.value;
         console.log("输入的文本：" + chatText);
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", `http://127.0.0.1:8000/chat?query=${chatText}`);
+        xhr.open("POST", `http://150.109.15.178:10082/chat?query=${chatText}`);
         xhr.addEventListener("readystatechange", function () {
             if (this.readyState === 4) {
                 var responseData = JSON.parse(this.responseText);
