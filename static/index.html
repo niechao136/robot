@@ -155,13 +155,79 @@
                 console.log("peerConnection:", peerConnection);
 
                 // 修复ontrack事件处理器 - 使用对象打印而非字符串连接
+                // 检查浏览器是否支持WebRTC
+                if (!window.RTCPeerConnection) {
+                    console.error("您的浏览器不支持WebRTC");
+                }
+                
+                // 添加更多详细的连接状态日志
+                peerConnection.onconnectionstatechange = function() {
+                    console.log("Connection state changed to: " + peerConnection.connectionState);
+                    
+                    // 显示连接状态在页面上，方便用户了解
+                    let statusElement = document.getElementById('connectionStatus');
+                    if (!statusElement) {
+                        statusElement = document.createElement('div');
+                        statusElement.id = 'connectionStatus';
+                        statusElement.style = 'text-align:center; color:white; margin-top:10px;';
+                        document.body.insertBefore(statusElement, document.getElementById('userSendArea'));
+                    }
+                    statusElement.textContent = '连接状态: ' + peerConnection.connectionState;
+                }
+                
+                // ICE连接状态变化监听 - 更详细的日志
+                peerConnection.oniceconnectionstatechange = function () {
+                    console.log("ICE connection state changed to: " + peerConnection.iceConnectionState);
+                    
+                    // 不同连接状态的详细处理
+                    switch(peerConnection.iceConnectionState) {
+                        case "connected":
+                            console.log("ICE连接已建立");
+                            break;
+                        case "disconnected":
+                            console.warn("ICE连接已断开，正在尝试重连...");
+                            break;
+                        case "failed":
+                            console.error("ICE连接失败，请刷新页面重试");
+                            break;
+                        case "closed":
+                            console.log("ICE连接已关闭");
+                            break;
+                    }
+                }
+                
+                // ICE候选者收集状态监听
+                peerConnection.onicegatheringstatechange = function() {
+                    console.log('ICE gathering state changed to:', peerConnection.iceGatheringState);
+                    if (peerConnection.iceGatheringState === 'complete') {
+                        console.log('ICE候选者收集完成');
+                    }
+                }
+                
+                // 信令状态变化监听
+                peerConnection.onsignalingstatechange = function() {
+                    console.log('Signaling state changed to:', peerConnection.signalingState);
+                }
+                
+                // ICE候选者处理 - 更详细的日志
+                peerConnection.onicecandidate = function(event) {
+                    console.log("ICE candidate found: ", event.candidate ? event.candidate.candidate : "No more candidates");
+                    if (!event.candidate) {
+                        console.log('ICE候选者收集完毕');
+                    }
+                }
+                
+                // 轨道添加事件处理 - 主要问题点，增强日志
                 peerConnection.ontrack = function (event) {
-                    console.log("ontrack event triggered:", event); // 正确打印事件对象
+                    console.log("===== ontrack事件被触发 =====");
+                    console.log("事件对象:", event);
                     console.log("Track kind:", event.track.kind);
+                    console.log("Track ID:", event.track.id);
                     console.log("Number of streams:", event.streams.length);
+                    console.log("Stream ID:", event.streams[0]?.id);
                     
                     if (event.track.kind === "video") {
-                        console.log("avatar video track received");
+                        console.log("接收到视频轨道");
                         var videoElement = document.createElement(event.track.kind);
                         videoElement.srcObject = event.streams[0];
                         videoElement.autoplay = true;
@@ -169,58 +235,51 @@
                         videoElement.muted = false;
                         videoElement.playsInline = true;
                         document.body.appendChild(videoElement);
+                        console.log("视频元素已创建并添加到页面");
                     }
 
                     if (event.track.kind === "audio") {
-                        console.log("avatar audio track received");
+                        console.log("接收到音频轨道");
                         var audioElement = document.createElement(event.track.kind);
                         audioElement.srcObject = event.streams[0];
                         audioElement.autoplay = true;
                         audioElement.id = "audioPlayer";
                         audioElement.muted = false;
                         document.body.appendChild(audioElement);
+                        console.log("音频元素已创建并添加到页面");
                     }
                 }
                 
-                // 添加track事件的替代监听方式
+                // 使用标准的事件监听器方式添加track事件处理
                 peerConnection.addEventListener('track', function(event) {
-                    console.log('Alternative track event listener called:', event);
+                    console.log('===== 替代的track事件监听器被调用 =====');
+                    console.log('事件详情:', event);
                 });
                 
-                // 添加ICE候选者处理
-                peerConnection.onicecandidate = function(event) {
-                    console.log("ICE candidate found: ", event.candidate);
-                }
-                
-                // 添加连接状态变化监听
-                peerConnection.onconnectionstatechange = function() {
-                    console.log("Connection state changed to: " + peerConnection.connectionState);
-                }
-                
-                // 添加ICE连接状态变化详细监听
-                peerConnection.onicegatheringstatechange = function() {
-                    console.log('ICE gathering state changed to:', peerConnection.iceGatheringState);
-                }
-                
-                // 添加信令状态变化监听
-                peerConnection.onsignalingstatechange = function() {
-                    console.log('Signaling state changed to:', peerConnection.signalingState);
+                // 添加数据通道事件监听（如果有数据通道的话）
+                peerConnection.ondatachannel = function(event) {
+                    console.log('数据通道已建立:', event.channel);
                 }
 
-                //webtrc连接状态
-                peerConnection.oniceconnectionstatechange = function () {
-                    console.log("avatar ice connection state changed to " + peerConnection.iceConnectionState);
-                    if (peerConnection.iceConnectionState === "connected") {
-                        console.log("avatar connected");
-                    }
-                    if (peerConnection.iceConnectionState === "disconnected" || peerConnection.iceConnectionState === "failed" || peerConnection.iceConnectionState === "closed") {
-                        console.log("avatar disconnected");
-                    }
+                // 创建收发器 - 这是接收远程流的关键
+                try {
+                    // 对于接收远程流，我们需要创建收发器
+                    const videoTransceiver = peerConnection.addTransceiver("video", {direction: "sendrecv"});
+                    const audioTransceiver = peerConnection.addTransceiver("audio", {direction: "sendrecv"});
+                    console.log('创建了视频收发器:', videoTransceiver);
+                    console.log('创建了音频收发器:', audioTransceiver);
+                    
+                    // 添加收发器的track事件监听
+                    videoTransceiver.receiver.track.onunmute = function() {
+                        console.log('视频轨道已激活');
+                    };
+                    
+                    audioTransceiver.receiver.track.onunmute = function() {
+                        console.log('音频轨道已激活');
+                    };
+                } catch (e) {
+                    console.error('创建收发器时出错:', e);
                 }
-
-                //创建音频流
-                peerConnection.addTransceiver("video", {direction: "sendrecv"});
-                peerConnection.addTransceiver("audio", {direction: "sendrecv"});
 
                 //合成
                 var avatarSynthesizer = new SpeechSDK.AvatarSynthesizer(speechConfig, avatarConfig);
@@ -270,10 +329,15 @@
                         sendButton.addEventListener("click", function () {
                             var videoPlayer = document.getElementById("videoPlayer");
                             var audioPlayer = document.getElementById("audioPlayer");
-                            videoPlayer.muted = false;
-                            audioPlayer.muted = false;
-                            videoPlayer.play();
-                            audioPlayer.play();
+                            // 检查元素是否存在再设置属性，避免报错
+                            if (videoPlayer) {
+                                videoPlayer.muted = false;
+                                videoPlayer.play();
+                            }
+                            if (audioPlayer) {
+                                audioPlayer.muted = false;
+                                audioPlayer.play();
+                            }
                             console.log("send button clicked");
                             chatWithAI(avatarSynthesizer);
 
