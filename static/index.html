@@ -132,9 +132,10 @@
         // 创建WebRTC对等体连接
         xhr.addEventListener("readystatechange", function (node) {
             if (this.readyState === 4) {
+                console.log("Token request completed with status: " + this.status);
                 var responseData = JSON.parse(this.responseText);
-                console.log("responseData: " + responseData,this)
-                var iceServerUrl = responseData.Urls[0]
+                console.log("responseData:", responseData); // 使用对象打印而非字符串连接
+                var iceServerUrl = responseData.Urls[0];
                 var iceServerUsername = responseData.Username;
                 var iceServerCredential = responseData.Password;
                 //创建WebRTC连接
@@ -150,12 +151,15 @@
                             credential: iceServerCredential
                         }
                     ]
-                })
-                console.log("peerConnection: " , peerConnection);
+                });
+                console.log("peerConnection:", peerConnection);
 
-                //抓取webtrc
+                // 修复ontrack事件处理器 - 使用对象打印而非字符串连接
                 peerConnection.ontrack = function (event) {
-                    console.log("event: " , event);
+                    console.log("ontrack event triggered:", event); // 正确打印事件对象
+                    console.log("Track kind:", event.track.kind);
+                    console.log("Number of streams:", event.streams.length);
+                    
                     if (event.track.kind === "video") {
                         console.log("avatar video track received");
                         var videoElement = document.createElement(event.track.kind);
@@ -176,6 +180,31 @@
                         audioElement.muted = false;
                         document.body.appendChild(audioElement);
                     }
+                }
+                
+                // 添加track事件的替代监听方式
+                peerConnection.addEventListener('track', function(event) {
+                    console.log('Alternative track event listener called:', event);
+                });
+                
+                // 添加ICE候选者处理
+                peerConnection.onicecandidate = function(event) {
+                    console.log("ICE candidate found: ", event.candidate);
+                }
+                
+                // 添加连接状态变化监听
+                peerConnection.onconnectionstatechange = function() {
+                    console.log("Connection state changed to: " + peerConnection.connectionState);
+                }
+                
+                // 添加ICE连接状态变化详细监听
+                peerConnection.onicegatheringstatechange = function() {
+                    console.log('ICE gathering state changed to:', peerConnection.iceGatheringState);
+                }
+                
+                // 添加信令状态变化监听
+                peerConnection.onsignalingstatechange = function() {
+                    console.log('Signaling state changed to:', peerConnection.signalingState);
                 }
 
                 //webtrc连接状态
