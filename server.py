@@ -8,8 +8,9 @@ from langchain.schema import StrOutputParser
 from langchain_community.chat_message_histories import RedisChatMessageHistory
 from langchain_community.utilities import SerpAPIWrapper
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
+from langchain.chat_models import init_chat_model
 from pydantic import BaseModel
+import os
 
 load_dotenv()
 
@@ -44,10 +45,13 @@ def search(query:str):
 
 class Master:
     def __init__(self):
-        self.chatmodel = ChatOpenAI(
-            model="gpt-3.5-turbo-1106",
+        self.chat_model = init_chat_model(
+            model="qwen-plus",
+            model_provider="openai",   # 阿里云兼容 OpenAI API
+            api_key=os.getenv("ALIYUN_API_KEY"),
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
             temperature=0,
-            streaming=True,
+            streaming=True
         )
         self.QingXu = "default"
         self.MEMORY_KEY = "chat_history"
@@ -141,13 +145,13 @@ class Master:
         
         tools = [search]
         agent = create_openai_tools_agent(
-            self.chatmodel,
+            self.chat_model,
             tools=tools,
             prompt=self.prompt,
         )
         self.memory =self.get_memory()
         memory = ConversationTokenBufferMemory(
-            llm = self.chatmodel,
+            llm = self.chat_model,
             human_prefix="面试官",
             ai_prefix="Tom",
             memory_key=self.MEMORY_KEY,
@@ -180,7 +184,7 @@ class Master:
                     ("user","{input}"),
                 ]
             )
-            chain = prompt | self.chatmodel 
+            chain = prompt | self.chat_model
             summary = chain.invoke({"input":store_message,"who_you_are":self.MOODS[self.QingXu]["roleSet"]})
             print("summary:",summary)
             chat_message_history.clear()
@@ -203,7 +207,7 @@ class Master:
         7. 如果用户输入的内容比较开心，只返回"cheerful",不要有其他内容，否则将受到惩罚。
         8. 只返回英文，不允许有换行符等其他内容，否则会受到惩罚。
         用户输入的内容是：{query}"""
-        chain = ChatPromptTemplate.from_template(prompt) | ChatOpenAI(temperature=0) | StrOutputParser()
+        chain = ChatPromptTemplate.from_template(prompt) | self.chat_model | StrOutputParser()
         result = chain.invoke({"query":query})
         self.QingXu = result
         print("情绪判断结果:",result)
