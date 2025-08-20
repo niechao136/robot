@@ -1,38 +1,37 @@
-FROM ubuntu:latest
+# 基础镜像
+FROM python:3.11-slim
 
-# 更改Ubuntu的源为阿里云的源
-RUN sed -i -e 's@http://archive.ubuntu.com/@http://mirrors.aliyun.com/@g' /etc/apt/sources.list && \
-    apt-get update
+# 设置工作目录
+WORKDIR /app
 
-# 安装必要的软件包
-RUN apt-get install -y coturn python3 python3-pip redis-server python3-venv
-
-
-# 创建虚拟环境
-RUN python3 -m venv /app/venv
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    coturn \
+    redis-server \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置默认源（国内源）
 ARG USE_CN_SOURCE=true
 
 # 根据环境变量选择是否使用国内源
 RUN if [ "$USE_CN_SOURCE" = "true" ]; then \
-        /app/venv/bin/pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple; \
+        pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple; \
     else \
-        /app/venv/bin/pip config set global.index-url https://pypi.org/simple; \
+        pip config set global.index-url https://pypi.org/simple; \
     fi
 
+# 复制 requirements.txt 并安装依赖（利用 Docker 缓存）
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install fastapi uvicorn langchain_core langchain_openai langchain langchain_community openai redis google-search-results nltk
 
-COPY requirements.txt .
+# 如果有 nltk 数据，可提前复制
+COPY nltk_data /app/nltk_data
+ENV NLTK_DATA=/app/nltk_data
 
-# 激活虚拟环境并安装Python依赖
-RUN /app/venv/bin/pip install --upgrade pip
-RUN /app/venv/bin/pip install fastapi uvicorn langchain_core langchain_openai langchain langchain_community openai redis google-search-results
-RUN /app/venv/bin/pip install -r  requirements.txt
-
-# 安装NLTK
-RUN /app/venv/bin/pip install nltk
-
-COPY nltk_data /app/venv/nltk_data
+# 复制代码
+COPY . /app
 
 # 复制配置文件
 COPY turnserver.conf /etc/turnserver.conf
@@ -41,16 +40,8 @@ COPY redis.conf /etc/redis/redis.conf
 # 设置数据卷
 VOLUME /data
 
-# 设置工作目录
-WORKDIR /app
-
-# 复制代码
-COPY . /app
-
-ENV NLTK_DATA /app/venv/nltk_data
-
 # 暴露端口
 EXPOSE 10082 3478 6379
 
 # 启动服务
-CMD ["sh", "-c", "turnserver -c /etc/turnserver.conf --listening-ip=0.0.0.0 --listening-port=3478 & redis-server /etc/redis/redis.conf --protected-mode no & sleep 3 && /app/venv/bin/uvicorn server:app --host 0.0.0.0 --port 10082"]
+CMD ["sh", "-c", "turnserver -c /etc/turnserver.conf --listening-ip=0.0.0.0 --listening-port=3478 & redis-server /etc/redis/redis.conf --protected-mode no & sleep 3 && uvicorn server:app --host 0.0.0.0 --port 10082"]

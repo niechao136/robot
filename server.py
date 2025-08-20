@@ -1,15 +1,16 @@
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from langchain_openai import ChatOpenAI
-from langchain.agents import create_openai_tools_agent,AgentExecutor,tool
-from langchain_core.prompts import ChatPromptTemplate,MessagesPlaceholder
-from langchain.schema import StrOutputParser
-from langchain.memory import ConversationTokenBufferMemory
-from langchain_community.chat_message_histories import RedisChatMessageHistory
-import os
-from langchain_community.utilities import SerpAPIWrapper
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from langchain.agents import create_openai_tools_agent, AgentExecutor, tool
+from langchain.memory import ConversationTokenBufferMemory
+from langchain.schema import StrOutputParser
+from langchain_community.chat_message_histories import RedisChatMessageHistory
+from langchain_community.utilities import SerpAPIWrapper
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
+
 load_dotenv()
 
 # from RAG_answer import MyLLM
@@ -218,10 +219,14 @@ def read_root():
     return {"Hello": "World"}
 
 
+class ChatRequest(BaseModel):
+    query: str
+
+
 @app.post("/chat")
-def chat(query:str):
+def chat(req: ChatRequest):
     master = Master()
-    res = master.qingxu_chain(query)
+    res = master.qingxu_chain(req.query)
     return res
 
 
