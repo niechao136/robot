@@ -8,7 +8,7 @@ from langchain.schema import StrOutputParser
 from langchain_community.chat_message_histories import RedisChatMessageHistory
 from langchain_community.utilities import SerpAPIWrapper
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.chat_models import init_chat_model
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 import os
 
@@ -45,13 +45,10 @@ def search(query:str):
 
 class Master:
     def __init__(self):
-        self.chat_model = init_chat_model(
-            model="qwen-plus",
-            model_provider="openai",   # 阿里云兼容 OpenAI API
-            api_key=os.getenv("ALIYUN_API_KEY"),
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        self.chat_model = ChatOpenAI(
+            model="gpt-3.5-turbo-1106",
             temperature=0,
-            streaming=True
+            streaming=True,
         )
         self.QingXu = "default"
         self.MEMORY_KEY = "chat_history"
@@ -207,7 +204,7 @@ class Master:
         7. 如果用户输入的内容比较开心，只返回"cheerful",不要有其他内容，否则将受到惩罚。
         8. 只返回英文，不允许有换行符等其他内容，否则会受到惩罚。
         用户输入的内容是：{query}"""
-        chain = ChatPromptTemplate.from_template(prompt) | self.chat_model | StrOutputParser()
+        chain = ChatPromptTemplate.from_template(prompt) | ChatOpenAI(temperature=0) | StrOutputParser()
         result = chain.invoke({"query":query})
         self.QingXu = result
         print("情绪判断结果:",result)
@@ -237,4 +234,4 @@ def chat(req: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="150.109.15.178", port=10082)
+    uvicorn.run(app, host="0.0.0.0", port=10082)
