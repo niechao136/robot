@@ -65,7 +65,7 @@
 
         var spokenSsml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts' xml:lang='zh-CN'>
         <voice name='${yinse}'>
-            <mstts:express-as style='${qingxu}' role='YoungAdultFemale' styledegree='2'>${msg}</mstts:express-as>
+            <mstts:express-as style='${qingxu}' styledegree='2'>${msg}</mstts:express-as>
         </voice></speak>`;
 
         avatarSynthesizer.speakSsmlAsync(spokenSsml).then((r) => {
@@ -146,7 +146,7 @@
         /* 1、选择文本转语音语言和语音 */
         const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, cogSvcRegin);
         // 设置发音人
-        speechConfig.speechSynthesisVoiceName = "zh-CN-XiaozhenNeural";
+        speechConfig.speechSynthesisVoiceName = "zh-CN-XiaoxiaoNeural";
         // 设置国家
         speechConfig.speechSynthesisLanguage = "zh-CN";
         // 设置语音合成输出格式
