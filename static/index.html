@@ -65,7 +65,7 @@
 
         var spokenSsml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts' xml:lang='zh-CN'>
         <voice name='${yinse}'>
-            <mstts:express-as style='${qingxu}' role='YoungAdultFemale' styledegreee='2'>${msg}</mstts:express-as>
+            <mstts:express-as style='${qingxu}' role='YoungAdultFemale' styledegree='2'>${msg}</mstts:express-as>
         </voice></speak>`;
 
         avatarSynthesizer.speakSsmlAsync(spokenSsml).then((r) => {
