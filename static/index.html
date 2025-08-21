@@ -69,11 +69,11 @@
         </voice></speak>`;
 
         avatarSynthesizer.speakSsmlAsync(spokenSsml).then((r) => {
-            console.log("speakSsmlAsync result: " + r);
+            console.log("speakSsmlAsync result: " , r);
             if (r.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
                 console.log("speakSsmlAsync completed!");
             } else {
-                console.log("speakSsmlAsync failed: " + r.errorDetails);
+                console.log("speakSsmlAsync failed: " , r.errorDetails);
                 if (r.reason === SpeechSDK.ResultReason.Canceled) {
                     var cancellationDetails = SpeechSDK.CancellationDetails.fromResult(r);
                     console.log(cancellationDetails.reason)
