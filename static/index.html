@@ -69,7 +69,7 @@
         </voice></speak>`;
 
         avatarSynthesizer.speakSsmlAsync(spokenSsml).then((r) => {
-            console.log("speakSsmlAsync result: " , r);
+            console.log("speakSsmlAsync result: " , r,spokenSsml);
             if (r.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
                 console.log("speakSsmlAsync completed!");
             } else {
