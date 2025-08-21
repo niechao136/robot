@@ -86,7 +86,7 @@ MOODS = {
 
 # ========== 把 search 做成 LangChain Tool ==========
 @tool
-def search(query: str):
+def tavily_search(query: str):
     """
     搜索功能 - 使用 Tavily 搜索 API
     """
@@ -97,7 +97,7 @@ def search(query: str):
     print("实时搜索结果:", result)
     return result
 
-TOOLS = [search]
+TOOLS = [tavily_search]
 
 # ========== LangGraph 的 State ==========
 class AgentState(TypedDict):
