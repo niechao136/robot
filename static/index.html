@@ -8,7 +8,7 @@
 <style>
     body {
         text-align: center;
-        background: url('./img/background.png') no-repeat center center fixed;
+        /*background: url('./img/background.png') no-repeat center center fixed;*/
         background-size: cover;
         color: white;
         font-family: '楷体', KaiTi, serif;
@@ -39,7 +39,7 @@ const animation = lottie.loadAnimation({
     container: lottieContainer,
     renderer: 'svg',
     loop: true,
-    autoplay: false,
+    autoplay: true,
     path: 'avatar.json' // 替换为你的Lottie动画JSON
 });
 
@@ -77,7 +77,7 @@ sendBtn.onclick = async () => {
     responseArea.innerHTML += `<div class="responseText">AI: ${aiText}</div>`;
 
     // 开始嘴型动画
-    animation.play();
+    // animation.play();
 
     // 创建语音合成器并播放
     const audioConfig = SpeechSDK.AudioConfig.fromDefaultSpeakerOutput();
@@ -86,12 +86,12 @@ sendBtn.onclick = async () => {
     synthesizer.speakTextAsync(aiText,
         result => {
             console.log("TTS完成:", result);
-            animation.stop();
+            // animation.stop();
             synthesizer.close();
         },
         error => {
             console.error(error);
-            animation.stop();
+            // animation.stop();
             synthesizer.close();
         }
     );
