@@ -1,103 +1,393 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>AI数字人模拟面试机器人</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.10.1/lottie.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
-<style>
-    body {
-        text-align: center;
-        /*background: url('./img/background.png') no-repeat center center fixed;*/
-        background-size: cover;
-        color: white;
-        font-family: '楷体', KaiTi, serif;
-    }
-    #lottieContainer { width: 300px; height: 300px; margin: 20px auto; }
-    #userSendArea { margin-top: 20px; }
-    .responseText { border: 1px solid #ccc; padding: 10px; margin-top: 10px; background-color: #f9f9f9; color: black; }
-</style>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <style>
+        html, body {
+            width: 100%;
+        }
+
+        video {
+            width: 65%;
+            height: auto;
+            border: 5px solid #333;
+            margin: 20px auto;
+            display: block;
+            border-radius: 15px; /* 添加圆角 */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* 添加阴影 */
+        }
+
+        /* 为整个页面设置背景图片 */
+        body {
+            background-image: url('./img/background.png');
+        }
+
+        /* 设置H1标题的样式 */
+        div h1 {
+            text-align: center; /* 文字居中 */
+            font-family: '楷体', KaiTi, serif;
+            color: white; /* 设置字体颜色为白色 */
+        }
+
+        #userSendArea {
+            width: 508px;
+            margin: 0 auto;
+        }
+
+        .responseText {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #f9f9f9;
+        }
+    </style>
+
+    <title>AI智能数字模拟面试机器人</title>
+    <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
+
 </head>
 <body>
-<h1>欢迎来到智泊AI数字人模拟面试现场</h1>
-<div id="lottieContainer"></div>
-<div id="responseArea"></div>
-<div id="userSendArea">
-    <input type="text" id="chatInput" placeholder="请输入你的问题" style="width:300px;height:30px;">
-    <select id="voiceSelect" style="width:120px;height:30px;">
-        <option value="zh-CN-XiaoxiaoNeural" selected>中文普通话</option>
-        <option value="zh-HK-HiuMaanNeural">中文粤语</option>
-        <option value="zh-TW-HsiaoChenNeural">中文台湾</option>
-    </select>
-    <button id="sendBtn" style="width:80px;height:30px;">发送</button>
+<div>
+    <H1>欢迎来到智泊AI数字人模拟面试现场</H1>
 </div>
-<audio id="ttsAudio"></audio>
+<div id="responseArea"></div>
 
 <script>
-const lottieContainer = document.getElementById('lottieContainer');
-const animation = lottie.loadAnimation({
-    container: lottieContainer,
-    renderer: 'svg',
-    loop: true,
-    autoplay: true,
-    path: 'avatar.json' // 替换为你的Lottie动画JSON
-});
+    // 参考网址：https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/real-time-synthesis-avatar#set-up-connection-to-real-time-avatar
+    var SpeechSDK;
+    var peerConnection;
+    /* 设置语音服务订阅区域和密钥 */
+    var cogSvcRegin = "eastus";
+    var subscriptionKey = "4Bnr4BTLCl1teBJJ2OxCmDlHrXCUDlloHGWQMBnc3rbAFapoujcWJQQJ99BHACYeBjFXJ3w3AAAYACOG7q9j";
 
-const subscriptionKey = "4Bnr4BTLCl1teBJJ2OxCmDlHrXCUDlloHGWQMBnc3rbAFapoujcWJQQJ99BHACYeBjFXJ3w3AAAYACOG7q9j";
-const region = "eastus";
-const chatInput = document.getElementById('chatInput');
-const sendBtn = document.getElementById('sendBtn');
-const ttsAudio = document.getElementById('ttsAudio');
-const responseArea = document.getElementById('responseArea');
-const voiceSelect = document.getElementById('voiceSelect');
+    var speakerHandel = function (avatarSynthesizer, msg, qingxu) {
+        var yinse = document.getElementById("voiceSelect").value;
 
-// 初始化 TTS
-const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
-speechConfig.speechSynthesisLanguage = "zh-CN";
+        var spokenSsml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts' xml:lang='zh-CN'>
+        <voice name='${yinse}'>
+            <mstts:express-as style='${qingxu}' role='YoungAdultFemale' styledegreee='2'>${msg}</mstts:express-as>
+        </voice></speak>`;
 
-// 发送消息
-sendBtn.onclick = async () => {
-    const query = chatInput.value.trim();
-    if (!query) return;
+        avatarSynthesizer.speakSsmlAsync(spokenSsml).then((r) => {
+            console.log("speakSsmlAsync result: " + r);
+            if (r.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+                console.log("speakSsmlAsync completed!");
+            } else {
+                console.log("speakSsmlAsync failed: " + r.errorDetails);
+                if (r.reason === SpeechSDK.ResultReason.Canceled) {
+                    var cancellationDetails = SpeechSDK.CancellationDetails.fromResult(r);
+                    console.log(cancellationDetails.reason)
+                    if (cancellationDetails.reason === SpeechSDK.CancellationReason.Error) {
+                        console.error("speakSsmlAsync error: " + cancellationDetails.errorDetails)
+                    }
+                }
+            }
+        }).catch((e) => {
+            console.log("speakSsmlAsync failed: " + e);
+            avatarSynthesizer.close();
+        });
+    }
 
-    // 显示用户输入
-    responseArea.innerHTML = `<div class="responseText">你: ${query}</div>`;
+    // 与AIagent交互函数
+    var chatWithAI = function (avatarSynthesizer) {
+        var chatInput = document.getElementById("chatInput");
+        var chatText = chatInput.value;
+        console.log("输入的文本：" + chatText);
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", `http://150.109.15.178:10082/chat`);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.addEventListener("readystatechange", function () {
+            if (this.readyState === 4) {
+                console.log("响应状态码：" + this.status);
+                console.log("响应文本：" + this.responseText);
 
-    // 调用AI接口获取回复
-    const res = await fetch('http://150.109.15.178:10082/chat', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({query})
-    });
-    const data = await res.json();
-    const aiText = Array.isArray(data) && data[0]?.msg ? data[0].msg : "抱歉，我暂时无法回答。";
-    const emotion = Array.isArray(data) && data[0]?.qingxu ? data[0].qingxu : "default";
+                try {
+                    // 尝试解析响应
+                    var responseData = JSON.parse(this.responseText);
+                    console.log("解析后的响应数据：", responseData);
 
-    // 显示AI文本
-    responseArea.innerHTML += `<div class="responseText">AI: ${aiText}</div>`;
+                    // 检查响应格式是否符合预期
+                    if (Array.isArray(responseData) && responseData.length > 0 && responseData[0].msg && responseData[0].qingxu) {
+                        // 正确格式的响应
+                        speakerHandel(avatarSynthesizer, responseData[0].msg, responseData[0].qingxu);
+                        // 将AI返回的文本显示在页面上
+                        var responseArea = document.getElementById("responseArea");
+                        responseArea.innerHTML = '<div class="responseText">' + responseData[0].msg + '</div>'; // 清空并更新内容
+                    } else {
+                        // 格式不符合预期，但尝试提取信息
+                        console.warn("响应格式不符合预期，尝试提取可用信息");
+                        var msg = "抱歉，我暂时无法为您提供回答。";
+                        var qingxu = "default";
 
-    // 开始嘴型动画
-    // animation.play();
+                        if (typeof responseData === 'object') {
+                            if (responseData.msg) msg = responseData.msg;
+                            if (responseData.qingxu) qingxu = responseData.qingxu;
+                        }
 
-    // 创建语音合成器并播放
-    const audioConfig = SpeechSDK.AudioConfig.fromDefaultSpeakerOutput();
-    speechConfig.speechSynthesisVoiceName = voiceSelect.value;
-    const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
-    synthesizer.speakTextAsync(aiText,
-        result => {
-            console.log("TTS完成:", result);
-            // animation.stop();
-            synthesizer.close();
-        },
-        error => {
-            console.error(error);
-            // animation.stop();
-            synthesizer.close();
+                        speakerHandel(avatarSynthesizer, msg, qingxu);
+                        var responseArea = document.getElementById("responseArea");
+                        responseArea.innerHTML = '<div class="responseText">' + msg + '</div>';
+                    }
+                } catch (error) {
+                    // 解析错误处理
+                    console.error("解析响应时出错：", error);
+                    // 显示错误信息并尝试继续
+                    var responseArea = document.getElementById("responseArea");
+                    responseArea.innerHTML = '<div class="responseText">抱歉，服务暂时无法响应，请稍后再试。</div>';
+                }
+
+                chatInput.value = ""; // 清空输入框
+            }
+        });
+        xhr.send(JSON.stringify({ query: chatText }));
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        /* 1、选择文本转语音语言和语音 */
+        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, cogSvcRegin);
+        // 设置发音人
+        speechConfig.speechSynthesisVoiceName = "zh-CN-XiaozhenNeural";
+        // 设置国家
+        speechConfig.speechSynthesisLanguage = "zh-CN";
+        // 设置语音合成输出格式
+        var videoFormat = new SpeechSDK.AvatarVideoFormat();
+
+        /* 2、选择虚拟形象角色和风格*/
+        const avatarConfig = new SpeechSDK.AvatarConfig(
+            "lisa", // Set avatar character here.
+            "casual-sitting", // Set avatar style here.
+            videoFormat,
+        );
+        /* 3、设置与实时虚拟形象的连接*/
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", `https://${cogSvcRegin}.tts.speech.microsoft.com/cognitiveservices/avatar/relay/token/v1`);
+        xhr.setRequestHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+        // 创建WebRTC对等体连接
+        xhr.addEventListener("readystatechange", function (node) {
+            if (this.readyState === 4) {
+                console.log("Token request completed with status: " + this.status);
+                var responseData = JSON.parse(this.responseText);
+                console.log("responseData:", responseData); // 使用对象打印而非字符串连接
+                var iceServerUrl = responseData.Urls[0];
+                var iceServerUsername = responseData.Username;
+                var iceServerCredential = responseData.Password;
+                //创建WebRTC连接
+                console.log("creating WebRTC connection");
+                console.log("ice server url: " + iceServerUrl);
+                console.log("ice server username: " + iceServerUsername);
+                console.log("ice server credential: " + iceServerCredential);
+                peerConnection = new RTCPeerConnection({
+                    iceServers: [
+                        {
+                            urls: [iceServerUrl],
+                            username: iceServerUsername,
+                            credential: iceServerCredential
+                        }
+                    ]
+                });
+                console.log("peerConnection:", peerConnection);
+
+                // 修复ontrack事件处理器 - 使用对象打印而非字符串连接
+                // 检查浏览器是否支持WebRTC
+                if (!window.RTCPeerConnection) {
+                    console.error("您的浏览器不支持WebRTC");
+                }
+
+                // 添加更多详细的连接状态日志
+                peerConnection.onconnectionstatechange = function() {
+                    console.log("Connection state changed to: " + peerConnection.connectionState);
+
+                    // 显示连接状态在页面上，方便用户了解
+                    let statusElement = document.getElementById('connectionStatus');
+                    if (!statusElement) {
+                        statusElement = document.createElement('div');
+                        statusElement.id = 'connectionStatus';
+                        statusElement.style = 'text-align:center; color:white; margin-top:10px;';
+                        document.body.insertBefore(statusElement, document.getElementById('userSendArea'));
+                    }
+                    statusElement.textContent = '连接状态: ' + peerConnection.connectionState;
+                }
+
+                // ICE连接状态变化监听 - 更详细的日志
+                peerConnection.oniceconnectionstatechange = function () {
+                    console.log("ICE connection state changed to: " + peerConnection.iceConnectionState);
+
+                    // 不同连接状态的详细处理
+                    switch(peerConnection.iceConnectionState) {
+                        case "connected":
+                            console.log("ICE连接已建立");
+                            break;
+                        case "disconnected":
+                            console.warn("ICE连接已断开，正在尝试重连...");
+                            break;
+                        case "failed":
+                            console.error("ICE连接失败，请刷新页面重试");
+                            break;
+                        case "closed":
+                            console.log("ICE连接已关闭");
+                            break;
+                    }
+                }
+
+                // ICE候选者收集状态监听
+                peerConnection.onicegatheringstatechange = function() {
+                    console.log('ICE gathering state changed to:', peerConnection.iceGatheringState);
+                    if (peerConnection.iceGatheringState === 'complete') {
+                        console.log('ICE候选者收集完成');
+                    }
+                }
+
+                // 信令状态变化监听
+                peerConnection.onsignalingstatechange = function() {
+                    console.log('Signaling state changed to:', peerConnection.signalingState);
+                }
+
+                // ICE候选者处理 - 更详细的日志
+                peerConnection.onicecandidate = function(event) {
+                    console.log("ICE candidate found: ", event.candidate ? event.candidate.candidate : "No more candidates");
+                    if (!event.candidate) {
+                        console.log('ICE候选者收集完毕');
+                    }
+                }
+
+                // 轨道添加事件处理 - 主要问题点，增强日志
+                peerConnection.ontrack = function (event) {
+                    console.log("===== ontrack事件被触发 =====");
+                    console.log("事件对象:", event);
+                    console.log("Track kind:", event.track.kind);
+                    console.log("Track ID:", event.track.id);
+                    console.log("Number of streams:", event.streams.length);
+                    console.log("Stream ID:", event.streams[0]?.id);
+
+                    if (event.track.kind === "video") {
+                        console.log("接收到视频轨道");
+                        var videoElement = document.createElement(event.track.kind);
+                        videoElement.srcObject = event.streams[0];
+                        videoElement.autoplay = true;
+                        videoElement.id = "videoPlayer";
+                        videoElement.muted = false;
+                        videoElement.playsInline = true;
+                        document.body.appendChild(videoElement);
+                        console.log("视频元素已创建并添加到页面");
+                    }
+
+                    if (event.track.kind === "audio") {
+                        console.log("接收到音频轨道");
+                        var audioElement = document.createElement(event.track.kind);
+                        audioElement.srcObject = event.streams[0];
+                        audioElement.autoplay = true;
+                        audioElement.id = "audioPlayer";
+                        audioElement.muted = false;
+                        document.body.appendChild(audioElement);
+                        console.log("音频元素已创建并添加到页面");
+                    }
+                }
+
+                // 使用标准的事件监听器方式添加track事件处理
+                peerConnection.addEventListener('track', function(event) {
+                    console.log('===== 替代的track事件监听器被调用 =====');
+                    console.log('事件详情:', event);
+                });
+
+                // 添加数据通道事件监听（如果有数据通道的话）
+                peerConnection.ondatachannel = function(event) {
+                    console.log('数据通道已建立:', event.channel);
+                }
+
+                // 创建收发器 - 这是接收远程流的关键
+                try {
+                    // 对于接收远程流，我们需要创建收发器
+                    const videoTransceiver = peerConnection.addTransceiver("video", {direction: "sendrecv"});
+                    const audioTransceiver = peerConnection.addTransceiver("audio", {direction: "sendrecv"});
+                    console.log('创建了视频收发器:', videoTransceiver);
+                    console.log('创建了音频收发器:', audioTransceiver);
+
+                    // 添加收发器的track事件监听
+                    videoTransceiver.receiver.track.onunmute = function() {
+                        console.log('视频轨道已激活');
+                    };
+
+                    audioTransceiver.receiver.track.onunmute = function() {
+                        console.log('音频轨道已激活');
+                    };
+                } catch (e) {
+                    console.error('创建收发器时出错:', e);
+                }
+
+                //合成
+                var avatarSynthesizer = new SpeechSDK.AvatarSynthesizer(speechConfig, avatarConfig);
+
+                // 开始合成
+                avatarSynthesizer.startAvatarAsync(peerConnection).then(
+                    (r) => {
+                        console.log("Avatar started ID:" + r.resultId)
+                        console.log("avatar started");
+
+                        //创建对话区域
+                        var chatInput = document.createElement("input");
+                        chatInput.type = "text";
+                        chatInput.placeholder = "请在此处输入你的问题:";
+                        chatInput.id = "chatInput";
+                        chatInput.style = "width:300px;height:50px;"
+                        document.body.appendChild(chatInput);
+
+                        //音色选择
+                        var voiceSelect = document.createElement("select");
+                        voiceSelect.id = "voiceSelect";
+                        voiceSelect.style = "width:100px;height:56px;"
+                        voiceSelect.innerHTML = `
+            <option value="zh-HK-HiuMaanNeural">中文粤语</option>
+            <option value="zh-TW-HsiaoChenNeural">中文台湾</option>
+            <option value="zh-CN-shaanxi-XiaoniNeural">中文陕西话</option>
+            <option value="zh-CN-liaoning-XiaobeiNeural">中文东北话</option>
+            <option value="zh-CN-XiaomoNeural" selected>中文普通话</option>
+            <option value="th-TH-PremwadeeNeural">泰语</option>
+        `;
+                        //发送按钮
+                        var sendButton = document.createElement("button");
+                        sendButton.innerHTML = "发送";
+                        sendButton.style = "width:100px;height:56px;"
+                        document.body.appendChild(sendButton);
+
+                        // 输入区
+                        var userInput = document.createElement("div")
+                        document.body.appendChild(userInput)
+                        userInput.appendChild(chatInput)
+                        userInput.appendChild(voiceSelect)
+                        userInput.appendChild(sendButton)
+                        // 添加id
+                        userInput.setAttribute("id", "userSendArea");
+
+                        //发送按钮事件
+                        sendButton.addEventListener("click", function () {
+                            var videoPlayer = document.getElementById("videoPlayer");
+                            var audioPlayer = document.getElementById("audioPlayer");
+                            // 检查元素是否存在再设置属性，避免报错
+                            if (videoPlayer) {
+                                videoPlayer.muted = false;
+                                videoPlayer.play();
+                            }
+                            if (audioPlayer) {
+                                audioPlayer.muted = false;
+                                audioPlayer.play();
+                            }
+                            console.log("send button clicked");
+                            chatWithAI(avatarSynthesizer);
+
+                        })
+                    }
+                ).catch(
+                    (error) => {
+                        console.log("Avatar failed to start. Error: " + error)
+                    })
+            }
+        });
+        xhr.send();
+        if (!!window.SpeechSDK) {
+            SpeechSDK = window.SpeechSDK;
         }
-    );
+    })</script>
 
-    chatInput.value = "";
-};
-</script>
 </body>
 </html>
+
