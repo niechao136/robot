@@ -99,13 +99,13 @@ function updateConnectionStatus(status) {
 
 // 初始化 WebRTC 连接
 async function initPeerConnection(tokenData) {
-    peerConnection = new RTCPeerConnection({
+    peerConnection = new RTCPeerConnection(/*{
         iceServers: [{
             urls: [tokenData.Urls[0]],
             username: tokenData.Username,
             credential: tokenData.Password
         }]
-    });
+    }*/);
 
     peerConnection.onconnectionstatechange = () => updateConnectionStatus(peerConnection.connectionState);
     peerConnection.onicecandidateerror = (e) => console.error('ICE candidate error:', e);
@@ -191,18 +191,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 获取 token 并初始化连接
     try {
-        // const tokenRes = await fetch(`https://${cogSvcRegion}.tts.speech.microsoft.com/cognitiveservices/avatar/relay/token/v1`, {
-        //     headers: {"Ocp-Apim-Subscription-Key": subscriptionKey}
-        // });
-        // const tokenData = await tokenRes.json();
-        // await initPeerConnection(tokenData);
+        const tokenRes = await fetch(`https://${cogSvcRegion}.tts.speech.microsoft.com/cognitiveservices/avatar/relay/token/v1`, {
+            headers: {"Ocp-Apim-Subscription-Key": subscriptionKey}
+        });
+        const tokenData = await tokenRes.json();
+        await initPeerConnection(tokenData);
 
         // 初始化 AvatarSynthesizer
         const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, cogSvcRegion);
         const videoFormat = new SpeechSDK.AvatarVideoFormat();
         const avatarConfig = new SpeechSDK.AvatarConfig("lisa", "casual-sitting", videoFormat);
         avatarSynthesizer = new SpeechSDK.AvatarSynthesizer(speechConfig, avatarConfig);
-        await avatarSynthesizer.startAvatarAsync();
+        await avatarSynthesizer.startAvatarAsync(peerConnection);
     } catch(err) {
         console.error('初始化失败:', err);
         updateConnectionStatus('初始化失败');
