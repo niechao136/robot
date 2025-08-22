@@ -10,7 +10,7 @@
         width: 100%;
         height: 100%;
         font-family: '楷体', KaiTi, serif;
-        background: url('./img/background.png') no-repeat center center fixed;
+        /*background: url('./img/background.png') no-repeat center center fixed;*/
         background-size: cover;
         color: white;
         text-align: center;
@@ -62,23 +62,70 @@
         color: white;
     }
 
-    #connectionStatus {
-        margin-top: 10px;
-        font-weight: bold;
+    #wrapperPlayer {
+        height: 480px;
+        width: 1270px;
+        background-color: aqua;
     }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
+<script src="xrtc-player-BJTnVhG9.js"></script>
+<script src="webrtc-player--YuOiwFd.js"></script>
+<script src="index-OS7Lza_r.js"></script>
 </head>
 <body>
 <h1>欢迎来到智泊AI数字人模拟面试现场</h1>
-<div id="connectionStatus">连接状态: 未连接</div>
+<div id="wrapperPlayer"></div>
 <div id="responseArea"></div>
 <div id="userSendArea"></div>
 
 <script>
+    const InitAppInfo = {
+        serverUrl: 'wss://avatar.cn-huadong-1.xf-yun.com/v1/interact',
+        appId: 'e06eba7a',
+        apiKey: '27e470270cd753fe0cd38c52c369c894',
+        apiSecret: 'MjBiYjJiOTdkNjU3M2RhMmUzYWQyNGNk',
+        sceneId: '217164690583851008',
+    }
+    const globalInfo = {
+        stream: {
+            protocol: 'xrtc',
+            alpha: 1,//是否开启透明背景，0关闭1开始，需配合protocol=xrtc使用
+        },
+        avatar: {
+            avatar_id: '138805001', //（必传）授权的形象资源id，到交互平台-接口服务-形象列表中获取已授权的形象
+        },
+        tts: {
+            vcn: 'x4_yuexiaoni_assist', //（必传）授权的声音资源id，到交互平台-接口服务-声音列表中获取已授权的声音
+        }
+    }
+    const SDKEvents = {
+        connected: 'connected',
+        disconnected: 'disconnected',
+        nlp: 'nlp',
+        asr: 'asr',
+        stream_start: 'stream_start',
+        frame_start: 'frame_start',
+        frame_stop: 'frame_stop',
+        action_start: 'action_start',
+        action_stop: 'action_stop',
+        tts_duration: 'tts_duration',
+        subtitle_info: 'subtitle_info',
+        // playNotAllowed: 'not-allowed',
+        error: 'error',
+    }
+    const PlayerEvents = {
+        play: 'play',
+        waiting: 'waiting',
+        playing: 'playing',
+        stop: 'stop',
+        playNotAllowed: 'not-allowed',
+        error: 'error',
+    }
+
 let SpeechSDK = window.SpeechSDK;
 let peerConnection;
 let avatarSynthesizer;
+let avatarPlatform;
 
 const cogSvcRegion = "eastus";
 const subscriptionKey = "4Bnr4BTLCl1teBJJ2OxCmDlHrXCUDlloHGWQMBnc3rbAFapoujcWJQQJ99BHACYeBjFXJ3w3AAAYACOG7q9j"; // ⚠️安全考虑：前端不建议直接暴露
@@ -89,59 +136,6 @@ function createElement(tag, props = {}, parent = document.body) {
     Object.assign(el, props);
     parent.appendChild(el);
     return el;
-}
-
-// 更新连接状态
-function updateConnectionStatus(status) {
-    const statusEl = document.getElementById('connectionStatus');
-    statusEl.textContent = '连接状态: ' + status;
-}
-
-// 初始化 WebRTC 连接
-async function initPeerConnection(tokenData) {
-    peerConnection = new RTCPeerConnection(/*{
-        iceServers: [{
-            urls: [tokenData.Urls[0]],
-            username: tokenData.Username,
-            credential: tokenData.Password
-        }]
-    }*/);
-
-    peerConnection.onconnectionstatechange = () => updateConnectionStatus(peerConnection.connectionState);
-    peerConnection.onicecandidateerror = (e) => console.error('ICE candidate error:', e);
-    peerConnection.onsignalingstatechange = () => console.log('signaling state:', peerConnection.signalingState);
-
-    peerConnection.ontrack = event => {
-        const stream = event.streams[0];
-        if(event.track.kind === 'video') {
-            let video = document.getElementById('videoPlayer');
-            if(!video) video = createElement('video', {id:'videoPlayer', autoplay:true, playsInline:true});
-            video.srcObject = stream;
-        }
-        if(event.track.kind === 'audio') {
-            let audio = document.getElementById('audioPlayer');
-            if(!audio) audio = createElement('audio', {id:'audioPlayer', autoplay:true});
-            audio.srcObject = stream;
-        }
-    };
-
-    // 创建收发器
-    peerConnection.addTransceiver("video", {direction: "recvonly"});
-    peerConnection.addTransceiver("audio", {direction: "recvonly"});
-}
-
-// AI TTS 语音合成
-function speakText(msg, style = 'default') {
-    const voice = document.getElementById('voiceSelect').value;
-    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts' xml:lang='zh-CN'>
-        <voice name='${voice}'>
-            <mstts:express-as style='${style}' styledegree='2'>${msg}</mstts:express-as>
-        </voice>
-    </speak>`;
-
-    avatarSynthesizer.speakSsmlAsync(ssml)
-        .then(r => console.log("speakSsmlAsync result:", r))
-        .catch(e => console.error("speakSsmlAsync failed:", e));
 }
 
 // AI 聊天
@@ -161,7 +155,9 @@ async function chatWithAI() {
         const msg = Array.isArray(data) && data[0]?.msg ? data[0].msg : "抱歉，暂时无法回答";
         const qingxu = Array.isArray(data) && data[0]?.qingxu ? data[0].qingxu : "default";
 
-        speakText(msg, qingxu);
+        avatarPlatform.writeText(msg, {
+            nlp: false // 当nlp=false时，为纯文本驱动，这里仅播报“hello” 原始字符串内容（不进行理解）虚拟人播报内容需少于2000字，包含标点符号
+        })
 
         const responseArea = document.getElementById('responseArea');
         responseArea.innerHTML = `<div class="responseText">${msg}</div>`;
@@ -180,33 +176,97 @@ document.addEventListener('DOMContentLoaded', async () => {
     navigator.mediaDevices.getUserMedia({audio:true, video:true})
     const userArea = document.getElementById('userSendArea');
     createElement('input', {id:'chatInput', placeholder:'请输入问题'}, userArea);
-    createElement('select', {id:'voiceSelect', innerHTML:`
-        <option value="zh-CN-XiaomoNeural" selected>普通话</option>
-        <option value="zh-HK-HiuMaanNeural">粤语</option>
-        <option value="zh-TW-HsiaoChenNeural">台湾</option>
-    `}, userArea);
     const sendBtn = createElement('button', {innerText:'发送'}, userArea);
     sendBtn.addEventListener('click', chatWithAI);
     document.getElementById('chatInput').addEventListener('keypress', e => { if(e.key==='Enter') chatWithAI(); });
 
-    // 获取 token 并初始化连接
-    try {
-        const tokenRes = await fetch(`https://${cogSvcRegion}.tts.speech.microsoft.com/cognitiveservices/avatar/relay/token/v1`, {
-            headers: {"Ocp-Apim-Subscription-Key": subscriptionKey}
-        });
-        const tokenData = await tokenRes.json();
-        await initPeerConnection(tokenData);
-
-        // 初始化 AvatarSynthesizer
-        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, cogSvcRegion);
-        const videoFormat = new SpeechSDK.AvatarVideoFormat();
-        const avatarConfig = new SpeechSDK.AvatarConfig("lisa", "casual-sitting", videoFormat);
-        avatarSynthesizer = new SpeechSDK.AvatarSynthesizer(speechConfig, avatarConfig);
-        await avatarSynthesizer.startAvatarAsync(peerConnection);
-    } catch(err) {
-        console.error('初始化失败:', err);
-        updateConnectionStatus('初始化失败');
-    }
+    avatarPlatform = new AvatarPlatform();
+    avatarPlatform.setApiInfo(InitAppInfo);
+    avatarPlatform.setGlobalParams(globalInfo);
+    // 可以选择性 按需 进行相关事件监听
+    avatarPlatform
+        .on(SDKEvents.connected, (initResp) => {
+            // 获取到拉流地址
+            console.log('sdk event: connected', initResp)
+        })
+        .on(SDKEvents.stream_start, () => {
+            // 引擎侧 首帧 推流开始 （注意：不代表端侧已经开始有画面！）
+            console.log('sdk event: stream_start')
+        })
+        .on(SDKEvents.disconnected, (err) => {
+            console.log('sdk event: disconnected')
+            if (err) {
+                // 因为异常 而导致的断开！ 此处可以进行 提示通知等
+                console.error('ws link disconnected because of Error')
+                console.error(e.code, e.message, e.name, e.stack)
+            }
+        })
+        .on(SDKEvents.asr, (asrData) => {
+            // 监听到语音的识别结果（asr）
+            console.log('sdk event: asr', asrData)
+        })
+        .on(SDKEvents.nlp, (nlpData) => {
+            // 监听到大模型语义理解结果（nlp）
+            console.log('sdk event: nlp', nlpData)
+        })
+        .on(SDKEvents.frame_start, (frameData) => {
+            //监听到开始说话的推流首帧
+            console.log('sdk event: frameBegin', frameData)
+        })
+        .on(SDKEvents.tts_duration, (sessionData) => {
+            //监听到语音合成用时时长。
+            console.log('sdk event: duration', sessionData)
+        })
+        .on(SDKEvents.frame_stop, (frameData) => {
+            //监听到结束说话的末尾帧
+            console.log('sdk event: frameEnd', frameData)
+        })
+        .on(SDKEvents.error, (error) => {
+            //监听到错误信息
+            console.log('sdk event: error', error)
+        })
+        .on(SDKEvents.action_start, (actionData) => {
+            //监听到开始动作的推流首帧
+            console.log('sdk event: actionBegin', actionData)
+        })
+        .on(SDKEvents.action_stop, (actionData) => {
+            //监听到结束动作的末尾帧
+            console.log('sdk event: actionEnd', actionData)
+        })
+    // 可以选择性 按需 进行相关事件监听
+    const player = avatarPlatform.player || avatarPlatform.createPlayer()
+    player
+        ?.on(PlayerEvents.play, () => {
+            console.log('sdk event: player play')
+        })
+        .on(PlayerEvents.waiting, () => {
+            console.log('sdk event: player waiting')
+        })
+        .on(PlayerEvents.playing, () => {
+            console.log('sdk event: player playing')
+        })
+        .on(PlayerEvents.playNotAllowed, () => {
+            // TODO 由于浏览器限制，如果用户从未对页面进行过交互点击等操作，则无法正常自动播放音视频等
+            // 这里需要交互层面引导用户点击屏幕，然后逻辑调用resume 恢复方法
+            console.log('sdk event: play not allowed, muted play')
+        })
+    // 获取token, 也可以提前获取，在上一步设置
+    avatarPlatform
+        .start({
+            //启动虚拟人，将视频流自动填充至class为wrapper的div中，该div必须具备大小
+            wrapper: document.querySelector('#wrapperPlayer')
+        })
+        .then(() => {
+            console.log('connected &&  stream play successfully')
+            // 注意这里仅是流可以播放， 如果是进页面在用户未交互网页时，代码自动连，
+            // 第三步骤 player实例 可能收到PlayerEvents.playNotAllowed事件。
+            // 您需要交互层面再次用户点击网页 并主动调用 player.resume() 恢复播放！！
+            // 原因：受限于浏览器的自动播放策略
+        })
+        .catch((e) => {
+            // 连接或者流失败，会话停止。
+            console.error(e.code, e.message, e.name, e.stack)
+        })
 });
 </script>
 </body>
