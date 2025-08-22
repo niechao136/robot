@@ -44,4 +44,4 @@ VOLUME /data
 EXPOSE 10082 3478 6379
 
 # 启动服务
-CMD ["sh", "-c", "turnserver -c /etc/turnserver.conf --listening-ip=0.0.0.0 --listening-port=3478 & redis-server /etc/redis/redis.conf --protected-mode no & sleep 3 && uvicorn server:app --host 0.0.0.0 --port 10082"]
+CMD ["sh", "-c", "turnserver -c /etc/turnserver.conf --listening-ip=0.0.0.0 --listening-port=3478 & redis-server /etc/redis/redis.conf --protected-mode no & sleep 3 && uvicorn server:app --host 0.0.0.0 --port 10082 --ssl-keyfile /app/key.pem --ssl-certfile /app/cert.pem"]
