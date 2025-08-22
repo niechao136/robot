@@ -108,6 +108,8 @@ async function initPeerConnection(tokenData) {
     });
 
     peerConnection.onconnectionstatechange = () => updateConnectionStatus(peerConnection.connectionState);
+    peerConnection.onicecandidateerror = (e) => console.error('ICE candidate error:', e);
+    peerConnection.onsignalingstatechange = () => console.log('signaling state:', peerConnection.signalingState);
 
     peerConnection.ontrack = event => {
         const stream = event.streams[0];
@@ -124,8 +126,8 @@ async function initPeerConnection(tokenData) {
     };
 
     // 创建收发器
-    peerConnection.addTransceiver("video", {direction: "sendrecv"});
-    peerConnection.addTransceiver("audio", {direction: "sendrecv"});
+    peerConnection.addTransceiver("video", {direction: "recvonly"});
+    peerConnection.addTransceiver("audio", {direction: "recvonly"});
 }
 
 // AI TTS 语音合成
@@ -175,6 +177,7 @@ async function chatWithAI() {
 // 页面初始化
 document.addEventListener('DOMContentLoaded', async () => {
     // 创建输入区域
+    navigator.mediaDevices.getUserMedia({audio:true, video:true})
     const userArea = document.getElementById('userSendArea');
     createElement('input', {id:'chatInput', placeholder:'请输入问题'}, userArea);
     createElement('select', {id:'voiceSelect', innerHTML:`
