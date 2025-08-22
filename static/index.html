@@ -105,14 +105,7 @@
         playNotAllowed: 'not-allowed',
         error: 'error',
     }
-
-let SpeechSDK = window.SpeechSDK;
-let peerConnection;
-let avatarSynthesizer;
-let avatarPlatform;
-
-const cogSvcRegion = "eastus";
-const subscriptionKey = "4Bnr4BTLCl1teBJJ2OxCmDlHrXCUDlloHGWQMBnc3rbAFapoujcWJQQJ99BHACYeBjFXJ3w3AAAYACOG7q9j"; // ⚠️安全考虑：前端不建议直接暴露
+    let avatarPlatform;
 
 // 创建元素工具函数
 function createElement(tag, props = {}, parent = document.body) {
@@ -157,12 +150,22 @@ async function chatWithAI() {
 // 页面初始化
 document.addEventListener('DOMContentLoaded', async () => {
     // 创建输入区域
-    navigator.mediaDevices.getUserMedia({audio:true, video:true})
-    const userArea = document.getElementById('userSendArea');
-    createElement('input', {id:'chatInput', placeholder:'请输入问题'}, userArea);
-    const sendBtn = createElement('button', {innerText:'发送'}, userArea);
-    sendBtn.addEventListener('click', chatWithAI);
-    document.getElementById('chatInput').addEventListener('keypress', e => { if(e.key==='Enter') chatWithAI(); });
+    const startBtn = document.createElement('button');
+    startBtn.innerText = '点击开始面试';
+    document.body.appendChild(startBtn);
+
+    startBtn.addEventListener('click', async () => {
+        await avatarPlatform.start({wrapper: document.querySelector('#wrapperPlayer')});
+        const player = avatarPlatform.player || avatarPlatform.createPlayer();
+        player.resume && player.resume(); // 确保播放恢复
+        const userArea = document.getElementById('userSendArea');
+        createElement('input', {id:'chatInput', placeholder:'请输入问题'}, userArea);
+        const sendBtn = createElement('button', {innerText:'发送'}, userArea);
+        sendBtn.addEventListener('click', chatWithAI);
+        document.getElementById('chatInput').addEventListener('keypress', e => { if(e.key==='Enter') chatWithAI(); });
+        startBtn.remove(); // 隐藏按钮
+    });
+
 
     avatarPlatform = new AvatarPlatform();
     avatarPlatform.setApiInfo(InitAppInfo);
@@ -234,23 +237,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 这里需要交互层面引导用户点击屏幕，然后逻辑调用resume 恢复方法
             console.log('sdk event: play not allowed, muted play')
         })
-    // 获取token, 也可以提前获取，在上一步设置
-    avatarPlatform
-        .start({
-            //启动虚拟人，将视频流自动填充至class为wrapper的div中，该div必须具备大小
-            wrapper: document.querySelector('#wrapperPlayer')
-        })
-        .then(() => {
-            console.log('connected &&  stream play successfully')
-            // 注意这里仅是流可以播放， 如果是进页面在用户未交互网页时，代码自动连，
-            // 第三步骤 player实例 可能收到PlayerEvents.playNotAllowed事件。
-            // 您需要交互层面再次用户点击网页 并主动调用 player.resume() 恢复播放！！
-            // 原因：受限于浏览器的自动播放策略
-        })
-        .catch((e) => {
-            // 连接或者流失败，会话停止。
-            console.error(e.code, e.message, e.name, e.stack)
-        })
+    // // 获取token, 也可以提前获取，在上一步设置
+    // avatarPlatform
+    //     .start({
+    //         //启动虚拟人，将视频流自动填充至class为wrapper的div中，该div必须具备大小
+    //         wrapper: document.querySelector('#wrapperPlayer')
+    //     })
+    //     .then(() => {
+    //         console.log('connected &&  stream play successfully')
+    //         // 注意这里仅是流可以播放， 如果是进页面在用户未交互网页时，代码自动连，
+    //         // 第三步骤 player实例 可能收到PlayerEvents.playNotAllowed事件。
+    //         // 您需要交互层面再次用户点击网页 并主动调用 player.resume() 恢复播放！！
+    //         // 原因：受限于浏览器的自动播放策略
+    //     })
+    //     .catch((e) => {
+    //         // 连接或者流失败，会话停止。
+    //         console.error(e.code, e.message, e.name, e.stack)
+    //     })
 });
 </script>
 </body>
