@@ -10,13 +10,23 @@
         width: 100%;
         height: 100%;
         font-family: '楷体', KaiTi, serif;
-        /*background: url('./img/background.png') no-repeat center center fixed;*/
         background-size: cover;
         color: white;
         text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
     }
 
     h1 { margin-top: 20px; }
+
+    #wrapperPlayer {
+        height: 480px;
+        width: 1270px;
+        background-color: aqua;
+        margin: 20px auto;
+    }
 
     #userSendArea {
         margin: 20px auto;
@@ -30,8 +40,9 @@
     }
 
     button {
-        width: 100px;
+        width: 120px;
         height: 46px;
+        margin: 5px;
         cursor: pointer;
     }
 
@@ -44,12 +55,6 @@
         border-radius: 8px;
         color: white;
     }
-
-    #wrapperPlayer {
-        height: 480px;
-        width: 1270px;
-        background-color: aqua;
-    }
 </style>
 <script type="module" src="xrtc-player-BJTnVhG9.js"></script>
 <script type="module" src="webrtc-player--YuOiwFd.js"></script>
@@ -58,6 +63,7 @@
 <body>
 <h1>欢迎来到智泊AI数字人模拟面试现场</h1>
 <div id="wrapperPlayer"></div>
+<div id="buttonArea"></div>
 <div id="responseArea"></div>
 <div id="userSendArea"></div>
 
@@ -71,16 +77,9 @@
         sceneId: '217164690583851008',
     }
     const globalInfo = {
-        stream: {
-            protocol: 'xrtc',
-            alpha: 1,//是否开启透明背景，0关闭1开始，需配合protocol=xrtc使用
-        },
-        avatar: {
-            avatar_id: '138805001', //（必传）授权的形象资源id，到交互平台-接口服务-形象列表中获取已授权的形象
-        },
-        tts: {
-            vcn: 'x4_yuexiaoni_assist', //（必传）授权的声音资源id，到交互平台-接口服务-声音列表中获取已授权的声音
-        }
+        stream: { protocol: 'xrtc', alpha: 1 },
+        avatar: { avatar_id: '138805001' },
+        tts: { vcn: 'x4_yuexiaoni_assist' }
     }
     const SDKEvents = {
         connected: 'connected',
@@ -94,7 +93,6 @@
         action_stop: 'action_stop',
         tts_duration: 'tts_duration',
         subtitle_info: 'subtitle_info',
-        // playNotAllowed: 'not-allowed',
         error: 'error',
     }
     const PlayerEvents = {
@@ -107,154 +105,79 @@
     }
     let avatarPlatform;
 
-// 创建元素工具函数
-function createElement(tag, props = {}, parent = document.body) {
-    const el = document.createElement(tag);
-    Object.assign(el, props);
-    parent.appendChild(el);
-    return el;
-}
-
-// AI 聊天
-async function chatWithAI() {
-    const chatInput = document.getElementById('chatInput');
-    const query = chatInput.value.trim();
-    if(!query) return;
-
-    try {
-        const res = await fetch("https://150.109.15.178:10082/chat", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({query})
-        });
-        const data = await res.json();
-
-        const msg = Array.isArray(data) && data[0]?.msg ? data[0].msg : "抱歉，暂时无法回答";
-        const qingxu = Array.isArray(data) && data[0]?.qingxu ? data[0].qingxu : "default";
-
-        avatarPlatform.writeText(msg, {
-            nlp: false // 当nlp=false时，为纯文本驱动，这里仅播报“hello” 原始字符串内容（不进行理解）虚拟人播报内容需少于2000字，包含标点符号
-        })
-
-        const responseArea = document.getElementById('responseArea');
-        responseArea.innerHTML = `<div class="responseText">${msg}</div>`;
-
-        chatInput.value = "";
-    } catch (err) {
-        console.error(err);
-        const responseArea = document.getElementById('responseArea');
-        responseArea.innerHTML = `<div class="responseText">服务暂时不可用，请稍后再试。</div>`;
+    function createElement(tag, props = {}, parent = document.body) {
+        const el = document.createElement(tag);
+        Object.assign(el, props);
+        parent.appendChild(el);
+        return el;
     }
-}
 
-// 页面初始化
-document.addEventListener('DOMContentLoaded', async () => {
-    // 创建输入区域
-    const startBtn = document.createElement('button');
-    startBtn.innerText = '点击开始面试';
-    document.body.appendChild(startBtn);
+    async function chatWithAI() {
+        const chatInput = document.getElementById('chatInput');
+        const query = chatInput.value.trim();
+        if (!query) return;
 
-    startBtn.addEventListener('click', async () => {
-        await avatarPlatform.start({wrapper: document.querySelector('#wrapperPlayer')});
-        const player = avatarPlatform.player || avatarPlatform.createPlayer();
-        player.resume && player.resume(); // 确保播放恢复
-        const userArea = document.getElementById('userSendArea');
-        createElement('input', {id:'chatInput', placeholder:'请输入问题'}, userArea);
-        const sendBtn = createElement('button', {innerText:'发送'}, userArea);
-        sendBtn.addEventListener('click', chatWithAI);
-        document.getElementById('chatInput').addEventListener('keypress', e => { if(e.key==='Enter') chatWithAI(); });
-        startBtn.remove(); // 隐藏按钮
-    });
+        try {
+            const res = await fetch("https://150.109.15.178:10082/chat", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({query})
+            });
+            const data = await res.json();
+            const msg = Array.isArray(data) && data[0]?.msg ? data[0].msg : "抱歉，暂时无法回答";
+            avatarPlatform.writeText(msg, { nlp: false });
+            document.getElementById('responseArea').innerHTML = `<div class="responseText">${msg}</div>`;
+            chatInput.value = "";
+        } catch (err) {
+            console.error(err);
+            document.getElementById('responseArea').innerHTML = `<div class="responseText">服务暂时不可用，请稍后再试。</div>`;
+        }
+    }
 
+    document.addEventListener('DOMContentLoaded', async () => {
+        avatarPlatform = new AvatarPlatform();
+        avatarPlatform.setApiInfo(InitAppInfo);
+        avatarPlatform.setGlobalParams(globalInfo);
 
-    avatarPlatform = new AvatarPlatform();
-    avatarPlatform.setApiInfo(InitAppInfo);
-    avatarPlatform.setGlobalParams(globalInfo);
-    // 可以选择性 按需 进行相关事件监听
-    avatarPlatform
-        .on(SDKEvents.connected, (initResp) => {
-            // 获取到拉流地址
-            console.log('sdk event: connected', initResp)
-        })
-        .on(SDKEvents.stream_start, () => {
-            // 引擎侧 首帧 推流开始 （注意：不代表端侧已经开始有画面！）
-            console.log('sdk event: stream_start')
-        })
-        .on(SDKEvents.disconnected, (err) => {
-            console.log('sdk event: disconnected')
-            if (err) {
-                // 因为异常 而导致的断开！ 此处可以进行 提示通知等
-                console.error('ws link disconnected because of Error')
-                console.error(e.code, e.message, e.name, e.stack)
+        const buttonArea = document.getElementById('buttonArea');
+        const startBtn = createElement('button', {innerText: '开始面试'}, buttonArea);
+        const endBtn = createElement('button', {innerText: '结束面试', disabled: true}, buttonArea);
+
+        startBtn.addEventListener('click', async () => {
+            await avatarPlatform.start({wrapper: document.querySelector('#wrapperPlayer')});
+            const player = avatarPlatform.player || avatarPlatform.createPlayer();
+            player.resume && player.resume();
+            const userArea = document.getElementById('userSendArea');
+            if (!document.getElementById('chatInput')) {
+                createElement('input', {id:'chatInput', placeholder:'请输入问题'}, userArea);
+                const sendBtn = createElement('button', {innerText:'发送'}, userArea);
+                sendBtn.addEventListener('click', chatWithAI);
+                document.getElementById('chatInput').addEventListener('keypress', e => { if(e.key==='Enter') chatWithAI(); });
             }
-        })
-        .on(SDKEvents.asr, (asrData) => {
-            // 监听到语音的识别结果（asr）
-            console.log('sdk event: asr', asrData)
-        })
-        .on(SDKEvents.nlp, (nlpData) => {
-            // 监听到大模型语义理解结果（nlp）
-            console.log('sdk event: nlp', nlpData)
-        })
-        .on(SDKEvents.frame_start, (frameData) => {
-            //监听到开始说话的推流首帧
-            console.log('sdk event: frameBegin', frameData)
-        })
-        .on(SDKEvents.tts_duration, (sessionData) => {
-            //监听到语音合成用时时长。
-            console.log('sdk event: duration', sessionData)
-        })
-        .on(SDKEvents.frame_stop, (frameData) => {
-            //监听到结束说话的末尾帧
-            console.log('sdk event: frameEnd', frameData)
-        })
-        .on(SDKEvents.error, (error) => {
-            //监听到错误信息
-            console.log('sdk event: error', error)
-        })
-        .on(SDKEvents.action_start, (actionData) => {
-            //监听到开始动作的推流首帧
-            console.log('sdk event: actionBegin', actionData)
-        })
-        .on(SDKEvents.action_stop, (actionData) => {
-            //监听到结束动作的末尾帧
-            console.log('sdk event: actionEnd', actionData)
-        })
-    // 可以选择性 按需 进行相关事件监听
-    const player = avatarPlatform.player || avatarPlatform.createPlayer()
-    player
-        ?.on(PlayerEvents.play, () => {
-            console.log('sdk event: player play')
-        })
-        .on(PlayerEvents.waiting, () => {
-            console.log('sdk event: player waiting')
-        })
-        .on(PlayerEvents.playing, () => {
-            console.log('sdk event: player playing')
-        })
-        .on(PlayerEvents.playNotAllowed, () => {
-            // TODO 由于浏览器限制，如果用户从未对页面进行过交互点击等操作，则无法正常自动播放音视频等
-            // 这里需要交互层面引导用户点击屏幕，然后逻辑调用resume 恢复方法
-            console.log('sdk event: play not allowed, muted play')
-        })
-    // // 获取token, 也可以提前获取，在上一步设置
-    // avatarPlatform
-    //     .start({
-    //         //启动虚拟人，将视频流自动填充至class为wrapper的div中，该div必须具备大小
-    //         wrapper: document.querySelector('#wrapperPlayer')
-    //     })
-    //     .then(() => {
-    //         console.log('connected &&  stream play successfully')
-    //         // 注意这里仅是流可以播放， 如果是进页面在用户未交互网页时，代码自动连，
-    //         // 第三步骤 player实例 可能收到PlayerEvents.playNotAllowed事件。
-    //         // 您需要交互层面再次用户点击网页 并主动调用 player.resume() 恢复播放！！
-    //         // 原因：受限于浏览器的自动播放策略
-    //     })
-    //     .catch((e) => {
-    //         // 连接或者流失败，会话停止。
-    //         console.error(e.code, e.message, e.name, e.stack)
-    //     })
-});
+            startBtn.disabled = true;
+            endBtn.disabled = false;
+        });
+
+        endBtn.addEventListener('click', async () => {
+            if (avatarPlatform) {
+                try {
+                    await avatarPlatform.stop(); // 停止虚拟人会话
+                } catch (err) {
+                    console.error('结束面试时出错:', err);
+                }
+            }
+            document.getElementById('responseArea').innerHTML = `<div class="responseText">面试已结束。</div>`;
+            startBtn.disabled = false;
+            endBtn.disabled = true;
+        });
+
+        avatarPlatform.on(SDKEvents.connected, (initResp) => console.log('connected', initResp))
+            .on(SDKEvents.stream_start, () => console.log('stream_start'))
+            .on(SDKEvents.error, (error) => console.log('error', error));
+
+        const player = avatarPlatform.player || avatarPlatform.createPlayer();
+        player?.on(PlayerEvents.play, () => console.log('player play'));
+    });
 </script>
 </body>
 </html>
